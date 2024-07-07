@@ -8,13 +8,18 @@
 ## 実行
 
 ```
-code2text.exe [path] [-m|--mode <mode>] [-t|--target <target>] [-e|--exclude <exclude>]
+code2text.exe [path] [-m|--mode <mode>] [-t|--target <target>] [-e|--exclude <exclude>] [-i] [-c]
 ```
 
 - path: 対象ディレクトリのパス（指定がなければカレントディレクトリ）
 - -m, --mode: code または tree を指定（指定がなければ両方表示）
 - -t, --target: 対象とするファイル（複数指定可能）
 - -e, --exclude: 除外するファイル（複数指定可能）
+- -i, --info: tree 表示でファイルの詳細を表示
+- -c, --copy: 結果をクリップボードにコピー
+
+- -v, --version: ビルド日時を表示
+- -h, --help: ヘルプの表示
 
 # 開発
 
@@ -71,12 +76,17 @@ Python 3.11.1
 
 - python のコードとして実行する
     ```
-    ./script/run_python.ps1 [path] [-m|--mode <mode>] [-t|--target <target>] [-e|--exclude <exclude>]
+    ./script/run_python.ps1 [path] [-m|--mode <mode>] [-t|--target <target>] [-e|--exclude <exclude>] [-i] [-c]
     ```
 
 - ビルド
 
-    仮想環境 をアクティベートした状態で実行する
+    ビルドのみの実行
     ```
-    ./script/build.ps1  
+    ./script/build.ps1
+    ```
+
+    バージョン（ビルド日時）を更新して、ビルドを実行
+    ```
+    ./script/build_versioning.ps1
     ```
