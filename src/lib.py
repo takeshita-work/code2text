@@ -1,4 +1,8 @@
+""" ライブラリ """
+
 import os
+
+from tqdm import tqdm
 
 def get_files(path, target_spec, exclude_spec):
     """
@@ -15,14 +19,18 @@ def get_files(path, target_spec, exclude_spec):
         list of str: 指定された条件に一致するファイルの相対パスのリスト
     """
     filtered_files = []
-    for root, _, files in os.walk(path, topdown=False):
-        for name in files:
-            rel_path = os.path.relpath(os.path.join(root, name), path)
-            if exclude_spec.match_file(rel_path):
-                continue
-            if not target_spec.match_file(name):
-                continue
-            filtered_files.append(rel_path)
+
+    total_dirs = sum([len(dirs) for _, dirs, _ in os.walk(path)])
+    with tqdm(total=total_dirs, desc="Processing", leave=False) as pbar:
+        for root, _, files in os.walk(path, topdown=False):
+            for name in files:
+                rel_path = os.path.relpath(os.path.join(root, name), path)
+                if exclude_spec.match_file(rel_path):
+                    continue
+                if not target_spec.match_file(name):
+                    continue
+                filtered_files.append(rel_path)
+            pbar.update(1)
 
     return filtered_files
 
@@ -41,23 +49,26 @@ def calculate_totals(path, files):
     total_lines = 0
     total_chars = 0
     info_padding = 0
-
-    for file in files:
-        file_path = os.path.join(path, file)
-        total_size += os.path.getsize(file_path)
-        with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
-            lines = sum(1 for _ in f)
-            f.seek(0)
-            chars = len(f.read())
-        total_lines += lines
-        total_chars += chars
-        parts = file.split(os.sep)
-        depth = len(parts) - 1
-        info_padding = max(info_padding, (depth + 2) * 4 + len(parts[-1]))
+    with tqdm(total=len(files), desc="Calculating totals", leave=False) as pbar:
+        for file in files:
+            file_path = os.path.join(path, file)
+            total_size += os.path.getsize(file_path)
+            with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
+                lines = sum(1 for _ in f)
+                f.seek(0)
+                chars = len(f.read())
+            total_lines += lines
+            total_chars += chars
+            parts = file.split(os.sep)
+            depth = len(parts) - 1
+            info_padding = max(info_padding, (depth + 2) * 4 + len(parts[-1]))
+            pbar.update(1)
 
     return total_size, total_lines, total_chars, info_padding
 
 def generate_tree(files, show_info=False, info_padding=0):
+    """ ツリーの生成 """
+
     def files_2_dir_tree(files):
         """
         ファイルパスのリストを基にディレクトリツリーを構築する関数
@@ -78,7 +89,7 @@ def generate_tree(files, show_info=False, info_padding=0):
                 if part not in current_level:
                     current_level[part] = {}  # 新しいディレクトリまたはファイルを追加
                 current_level = current_level[part]  # 次のレベルに移動
-        
+
         return dir_tree
 
     def format_tree(node, prefix="", base_path="", level=0):
@@ -122,10 +133,14 @@ def generate_tree(files, show_info=False, info_padding=0):
             if isinstance(node[child], dict):
                 tree_str += format_tree(node[child], new_prefix, child_path, level + 1)
 
+            pbar.update(1)
+
         return tree_str
 
     dir_tree = files_2_dir_tree(files)
-    return format_tree(dir_tree, base_path=".", level=0)
+
+    with tqdm(total=len(files), desc="Generating tree") as pbar:
+        return format_tree(dir_tree, base_path=".", level=0)
 
 def normalize_path(path):
     """
@@ -151,7 +166,7 @@ def generate_files_content(path, files):
         str: 指定された形式で結合されたファイルの内容
     """
     content = ""
-    
+
     for file in files:
         file_path = os.path.join(path, file)
         content += f"\n```{normalize_path(file)}\n"

@@ -1,49 +1,53 @@
+""" code の tree表示 と コンテンツの表示、結果をクリップボードへコピーする  """
+
 import os
 import sys
+
+import argparse
 from pathspec import PathSpec
 import pyperclip
 
-import lib as lib
+import lib
 from version import BUILD_DATE
 
-import argparse
+
 parser = argparse.ArgumentParser(
     prog='code2text',
     add_help=True,
     formatter_class=argparse.RawDescriptionHelpFormatter,
 )
 parser.add_argument(
-    'path', 
-    nargs='?', 
-    default='.', 
+    'path',
+    nargs='?',
+    default='.',
     help='対象ディレクトリのパス. 指定がなければカレントディレクトリ.'
 )
 parser.add_argument(
-    '-m', '--mode', 
-    choices=['code', 'tree', 'all'], 
-    default='all', 
+    '-m', '--mode',
+    choices=['code', 'tree', 'all'],
+    default='all',
     help='code または tree を指定. 指定がなければ両方表示される. '
 )
 parser.add_argument(
-    '-t', '--target', 
-    nargs='+', 
+    '-t', '--target',
+    nargs='+',
     default=['*'],
     help='対象とするファイル. 複数指定可能.'
 )
 parser.add_argument(
-    '-e', '--exclude', 
+    '-e', '--exclude',
     nargs='+',
     default=[],
     help='除外するファイル. 複数指定可能.'
 )
 parser.add_argument(
-    '-i', '--info', 
-    action='store_true', 
+    '-i', '--info',
+    action='store_true',
     help='tree 表示でファイルの詳細を表示'
 )
 parser.add_argument(
-    '-c', '--copy', 
-    action='store_true', 
+    '-c', '--copy',
+    action='store_true',
     help='結果をクリップボードにコピー'
 )
 parser.add_argument(
@@ -51,11 +55,19 @@ parser.add_argument(
     action='store_true',
     help='ビルド日時を表示'
 )
-if __name__ == "__main__":
+
+
+def main():
+    """ メイン処理 """
     result = ''
     try:
         args = parser.parse_args()
-        
+
+        show_info = args.info
+        is_get_tree = args.mode in ('tree', 'all')
+        is_get_contents = args.mode in ('code', 'all')
+        is_copy_clipboard = args.copy
+
         if args.version:
             print(f"build date: {BUILD_DATE}")
             sys.exit(1)
@@ -71,9 +83,9 @@ if __name__ == "__main__":
         gitignore_path = os.path.join(path, '.gitignore') # .gitignoreの読み込みとパース
         gitignore_patterns = []
         if os.path.exists(gitignore_path):
-            with open(gitignore_path) as f:
+            with open(gitignore_path, encoding="utf-8") as f:
                 gitignore_patterns = f.read().splitlines()
-        
+
         exclude_patterns = (['.git', '.gitignore']) + gitignore_patterns + (args.exclude)
         exclude_spec = PathSpec.from_lines('gitwildmatch', exclude_patterns)
 
@@ -85,39 +97,45 @@ if __name__ == "__main__":
         files = lib.get_files(path, target_spec, exclude_spec)
 
         ######################################################################
-        # 総サイズと総ライン数と総文字数の計算
-        ######################################################################
-        total_size, total_lines, total_chars, info_padding = lib.calculate_totals(path, files)
-
-        ######################################################################
         # 結果の取得と表示
         ######################################################################
         print(f"path: {path}")
         print("")
-        print(f"total size : {total_size:,} bytes")
-        print(f"total lines: {total_lines}")
-        print(f"total chars: {total_chars}")
-        
+
+        info_padding = 0
+        if show_info:
+            # 総サイズと総ライン数と総文字数の計算
+            total_size, total_lines, total_chars, info_padding = lib.calculate_totals(path, files)
+            print(f"total size : {total_size:,} bytes")
+            print(f"total lines: {total_lines}")
+            print(f"total chars: {total_chars}")
+            print("")
+
         # ツリー
-        if args.mode in ('tree', 'all'):
+        if is_get_tree:
             tree = (
                 f"```tree\n"
                 f"{lib.normalize_path(args.path)}\n"
-                f"{lib.generate_tree(files, show_info=args.info, info_padding=info_padding)}"
+                f"{lib.generate_tree(files, show_info=show_info, info_padding=info_padding)}"
                 f"```"
             )
             print("")
             print(tree)
             result += tree
-        
+
         # ファイルコンテンツ, クリップボードへのコピー
-        if (
-            args.mode in ('code', 'all') or
-            args.copy 
-        ):
+        if (is_get_contents or is_copy_clipboard):
             # 処理継続の確認
             print("")
-            input_result = input("処理を継続しますか？ (y/n): ")
+            print("")
+            print("継続処理")
+            if is_get_contents:
+                print(" -  ファイルコンテンツの取得")
+            if is_copy_clipboard:
+                print(" -  クリップボードへのコピー")
+
+            print("")
+            input_result = input("継続しますか？ (y/n): ")
             if input_result.lower() != 'y':
                 print("処理を中断しました。")
                 sys.exit(1)
@@ -135,8 +153,13 @@ if __name__ == "__main__":
                 print("")
                 print("クリップボードにコピーしました")
 
-    except KeyboardInterrupt:
-        sys.exit(1)
     except Exception as e:
         print(f"ERROR: {e}")
+        sys.exit(1)
+
+
+if __name__ == "__main__":
+    try:
+        main()
+    except KeyboardInterrupt:
         sys.exit(1)
