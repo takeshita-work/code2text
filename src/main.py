@@ -51,6 +51,12 @@ parser.add_argument(
     help='結果をクリップボードにコピー'
 )
 parser.add_argument(
+    '-s', '--sep',
+    type=str,
+    default='```',
+    help='ファイルの区切り文字（デフォルトは ```）'
+)
+parser.add_argument(
     '-v', '--version',
     action='store_true',
     help='ビルド日時を表示'
@@ -63,10 +69,11 @@ def main():
     try:
         args = parser.parse_args()
 
-        show_info = args.info
-        is_get_tree = args.mode in ('tree', 'all')
-        is_get_contents = args.mode in ('code', 'all')
+        show_info         = args.info
+        is_get_tree       = args.mode in ('tree', 'all')
+        is_get_contents   = args.mode in ('code', 'all')
         is_copy_clipboard = args.copy
+        separate_str      = args.sep
 
         if args.version:
             print(f"build date: {BUILD_DATE}")
@@ -114,10 +121,11 @@ def main():
         # ツリー
         if is_get_tree:
             tree = (
-                f"```tree\n"
+                f"Tree\n"
+                f"{separate_str}\n"
                 f"{lib.normalize_path(args.path)}\n"
                 f"{lib.generate_tree(files, show_info=show_info, info_padding=info_padding)}"
-                f"```"
+                f"{separate_str}\n"
             )
             print("")
             print(tree)
@@ -142,7 +150,7 @@ def main():
 
             # ファイルコンテンツ
             if args.mode in ('code', 'all'):
-                content = f"{lib.generate_files_content(path, files)}"
+                content = f"{lib.generate_files_content(path, files, separate_str)}"
                 print("")
                 print(content)
                 result += f"\n\n{content}"

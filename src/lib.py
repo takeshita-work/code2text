@@ -139,7 +139,7 @@ def generate_tree(files, show_info=False, info_padding=0):
 
     dir_tree = files_2_dir_tree(files)
 
-    with tqdm(total=len(files), desc="Generating tree") as pbar:
+    with tqdm(total=len(files), desc="Generating tree", leave=False) as pbar:
         return format_tree(dir_tree, base_path=".", level=0)
 
 def normalize_path(path):
@@ -154,13 +154,14 @@ def normalize_path(path):
     """
     return path.replace("\\", "/").replace("//", "/")  # "\\"を"/"に、"//"を"/"に置換
 
-def generate_files_content(path, files):
+def generate_files_content(path, files, separate_str):
     """
     指定されたファイルの内容を取得し、指定された形式で文字列として返す関数
 
     Args:
         path (str): ファイルが存在するディレクトリのパス
         files (list of str): ファイル名のリスト
+        separate_str: ファイル名の区切り文字
 
     Returns:
         str: 指定された形式で結合されたファイルの内容
@@ -169,9 +170,10 @@ def generate_files_content(path, files):
 
     for file in files:
         file_path = os.path.join(path, file)
-        content += f"\n```{normalize_path(file)}\n"
+        content += f"\nFile: {normalize_path(file)}\n"
+        content += f"{separate_str}\n"
         with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
-            content += f.read()
-        content += "\n```\n"
+            content += f.read() + "\n"
+        content += f"{separate_str}\n"
 
     return content
